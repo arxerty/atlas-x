@@ -7,12 +7,12 @@ import { AICopilotDrawer } from './components/ui/AICopilotDrawer';
 import { TimelineReplayBar } from './components/ui/TimelineReplayBar';
 import { WhatIfSimulationModal } from './components/ui/WhatIfSimulationModal';
 import { LiveDebuggerPanel } from './components/ui/LiveDebuggerPanel';
-import { MultiplayerHUD } from './components/ui/MultiplayerHUD';
+import { GitHubConnectModal } from './components/ui/GitHubConnectModal';
 
 export function App() {
   return (
     <main className="w-screen h-screen relative overflow-hidden bg-[#08090C]">
-      {/* 3D WebGL / R3F Spatial Canvas */}
+      {/* 3D WebGL Spatial NYC Canvas */}
       <SpatialCanvas />
 
       {/* Top Navbar */}
@@ -21,7 +21,7 @@ export function App() {
       {/* Top Mode Switcher Bar */}
       <ModeSwitcherBar />
 
-      {/* Building & Code AST Inspector Drawer */}
+      {/* Building & Code Inspector Drawer */}
       <InspectorDrawer />
 
       {/* AI Graph Copilot Drawer */}
@@ -36,8 +36,8 @@ export function App() {
       {/* Live Spatial Debugger Panel */}
       <LiveDebuggerPanel />
 
-      {/* Real-time Multiplayer HUD */}
-      <MultiplayerHUD />
+      {/* GitHub Connection Modal */}
+      <GitHubConnectModal />
     </main>
   );
 }

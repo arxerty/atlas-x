@@ -6,13 +6,14 @@ import { TwinMode } from '../../types/atlas';
 export const ModeSwitcherBar: React.FC = () => {
   const mode = useAtlasStore((s) => s.mode);
   const setMode = useAtlasStore((s) => s.setMode);
+  const t = useAtlasStore((s) => s.t);
 
-  const modes: { id: TwinMode; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'EXPLORE', label: 'Static Twin', icon: Eye },
-    { id: 'LIVE_RUNTIME', label: 'Live Telemetry', icon: Activity },
-    { id: 'REPLAY', label: 'Architecture Replay', icon: History },
-    { id: 'SIMULATION', label: 'What-If Sandbox', icon: GitCompare },
-    { id: 'DEBUGGER', label: 'Live Debugger', icon: Bug },
+  const modes: { id: TwinMode; labelKey: any; icon: React.FC<{ className?: string }> }[] = [
+    { id: 'EXPLORE', labelKey: 'modeExplore', icon: Eye },
+    { id: 'LIVE_RUNTIME', labelKey: 'modeTelemetry', icon: Activity },
+    { id: 'REPLAY', labelKey: 'modeReplay', icon: History },
+    { id: 'SIMULATION', labelKey: 'modeSimulation', icon: GitCompare },
+    { id: 'DEBUGGER', labelKey: 'modeDebugger', icon: Bug },
   ];
 
   return (
@@ -31,7 +32,7 @@ export const ModeSwitcherBar: React.FC = () => {
             }`}
           >
             <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
-            {m.label}
+            {t(m.labelKey)}
           </button>
         );
       })}

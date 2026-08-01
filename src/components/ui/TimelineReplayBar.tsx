@@ -7,6 +7,7 @@ export const TimelineReplayBar: React.FC = () => {
   const commits = useAtlasStore((s) => s.commits);
   const activeCommitIndex = useAtlasStore((s) => s.activeCommitIndex);
   const setActiveCommitIndex = useAtlasStore((s) => s.setActiveCommitIndex);
+  const t = useAtlasStore((s) => s.t);
 
   if (mode !== 'REPLAY') return null;
 
@@ -18,10 +19,10 @@ export const TimelineReplayBar: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <GitCommit className="w-4 h-4 text-cyan-400" />
-          <span className="font-mono text-xs font-bold text-white">Git Commit Architecture Replay</span>
+          <span className="font-mono text-xs font-bold text-white">{t('commitReplayTitle')}</span>
         </div>
         <span className="text-[10px] font-mono text-slate-400">
-          Commit {activeCommitIndex + 1} of {commits.length}
+          {t('commitCount').replace('{current}', String(activeCommitIndex + 1)).replace('{total}', String(commits.length))}
         </span>
       </div>
 

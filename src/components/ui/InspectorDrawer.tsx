@@ -6,6 +6,7 @@ export const InspectorDrawer: React.FC = () => {
   const selectedBuildingId = useAtlasStore((s) => s.selectedBuildingId);
   const buildings = useAtlasStore((s) => s.buildings);
   const selectBuilding = useAtlasStore((s) => s.selectBuilding);
+  const t = useAtlasStore((s) => s.t);
 
   const building = buildings.find((b) => b.id === selectedBuildingId);
   if (!building) return null;
@@ -16,10 +17,10 @@ export const InspectorDrawer: React.FC = () => {
       <div className="flex items-start justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center gap-3">
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-900 font-bold font-mono text-xs"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-900 font-bold font-mono text-xs shadow-md"
             style={{ backgroundColor: building.color }}
           >
-            {building.type === 'file' ? 'AST' : building.type.slice(0, 2).toUpperCase()}
+            {building.type === 'file' ? 'NYC' : building.type.slice(0, 2).toUpperCase()}
           </div>
           <div>
             <h2 className="font-bold text-sm text-white font-mono">{building.name}</h2>
@@ -37,21 +38,21 @@ export const InspectorDrawer: React.FC = () => {
       {/* Primary Metrics Grid */}
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="p-2.5 rounded-lg bg-surface border border-border flex flex-col">
-          <span className="text-slate-400 text-[10px] uppercase font-mono">Lines of Code</span>
+          <span className="text-slate-400 text-[10px] uppercase font-mono">{t('linesOfCode')}</span>
           <span className="font-mono text-base font-bold text-cyan-400">{building.linesOfCode || 'N/A'}</span>
         </div>
         <div className="p-2.5 rounded-lg bg-surface border border-border flex flex-col">
-          <span className="text-slate-400 text-[10px] uppercase font-mono">Complexity Index</span>
+          <span className="text-slate-400 text-[10px] uppercase font-mono">{t('complexityIndex')}</span>
           <span className={`font-mono text-base font-bold ${building.complexity > 20 ? 'text-rose-400' : 'text-emerald-400'}`}>
             {building.complexity || '0'}
           </span>
         </div>
         <div className="p-2.5 rounded-lg bg-surface border border-border flex flex-col">
-          <span className="text-slate-400 text-[10px] uppercase font-mono">Telemetry Throughput</span>
-          <span className="font-mono text-sm font-semibold text-emerald-300">{building.rps ? `${building.rps} req/s` : 'Idle'}</span>
+          <span className="text-slate-400 text-[10px] uppercase font-mono">{t('telemetryThroughput')}</span>
+          <span className="font-mono text-sm font-semibold text-emerald-300">{building.rps ? `${building.rps} req/s` : t('idle')}</span>
         </div>
         <div className="p-2.5 rounded-lg bg-surface border border-border flex flex-col">
-          <span className="text-slate-400 text-[10px] uppercase font-mono">P99 Latency</span>
+          <span className="text-slate-400 text-[10px] uppercase font-mono">{t('p99Latency')}</span>
           <span className="font-mono text-sm font-semibold text-purple-300">{building.latencyMs ? `${building.latencyMs} ms` : '0 ms'}</span>
         </div>
       </div>
@@ -62,7 +63,7 @@ export const InspectorDrawer: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-cyan-400" />
-              AST Function Rooms ({building.functions.length})
+              {t('astFunctions')} ({building.functions.length})
             </span>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -79,12 +80,12 @@ export const InspectorDrawer: React.FC = () => {
         </div>
       )}
 
-      {/* Dependency Links */}
+      {/* Outbound Highways */}
       {building.dependencies.length > 0 && (
         <div className="flex flex-col gap-2">
           <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
             <ArrowUpRight className="w-3.5 h-3.5 text-purple-400" />
-            Outbound Highways ({building.dependencies.length})
+            {t('outboundHighways')} ({building.dependencies.length})
           </span>
           <div className="flex flex-col gap-1.5">
             {building.dependencies.map((targetId) => {
@@ -96,7 +97,7 @@ export const InspectorDrawer: React.FC = () => {
                   className="p-2 rounded-lg bg-surface/60 border border-border flex items-center justify-between text-xs font-mono text-cyan-300 hover:bg-slate-800 transition cursor-pointer"
                 >
                   <span>{targetNode?.name || targetId}</span>
-                  <span className="text-[10px] text-slate-400">Highway</span>
+                  <span className="text-[10px] text-slate-400">2-Lane Road</span>
                 </div>
               );
             })}

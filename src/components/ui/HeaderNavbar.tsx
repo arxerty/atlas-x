@@ -1,6 +1,7 @@
 import React from 'react';
-import { Globe, GitBranch, Search, Bot, Bug, Sparkles, Layers, Zap } from 'lucide-react';
+import { Globe, GitBranch, Search, Bot, Bug, Sparkles, Zap, Github, Languages } from 'lucide-react';
 import { useAtlasStore } from '../../stores/useAtlasStore';
+import { Language } from '../../lib/i18n';
 
 export const HeaderNavbar: React.FC = () => {
   const toggleAICopilot = useAtlasStore((s) => s.toggleAICopilot);
@@ -11,6 +12,12 @@ export const HeaderNavbar: React.FC = () => {
   const toggleLiveStreaming = useAtlasStore((s) => s.toggleLiveStreaming);
   const searchQuery = useAtlasStore((s) => s.searchQuery);
   const setSearchQuery = useAtlasStore((s) => s.setSearchQuery);
+
+  const connectedRepoName = useAtlasStore((s) => s.connectedRepoName);
+  const setGithubModalOpen = useAtlasStore((s) => s.setGithubModalOpen);
+  const language = useAtlasStore((s) => s.language);
+  const setLanguage = useAtlasStore((s) => s.setLanguage);
+  const t = useAtlasStore((s) => s.t);
 
   return (
     <header className="absolute top-0 left-0 right-0 h-16 glass-panel border-b border-border z-30 px-6 flex items-center justify-between">
@@ -23,27 +30,30 @@ export const HeaderNavbar: React.FC = () => {
           <div className="flex items-center gap-2">
             <h1 className="font-bold text-lg tracking-wider text-white">ATLAS X</h1>
             <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800">
-              Digital Twin v2.4
+              {t('digitalTwinVersion')}
             </span>
           </div>
-          <p className="text-xs text-slate-400">The Digital Twin of Software</p>
+          <p className="text-xs text-slate-400">{t('brandTagline')}</p>
         </div>
       </div>
 
-      {/* Spatial Repository & Search Input */}
+      {/* GitHub Repo Connection & Search Input */}
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface border border-border text-xs text-slate-300">
-          <GitBranch className="w-3.5 h-3.5 text-purple-400" />
-          <span className="font-mono font-medium">org-enterprise/core-monolith</span>
+        <button
+          onClick={() => setGithubModalOpen(true)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface border border-slate-700 hover:border-cyan-500 text-xs text-slate-200 transition group"
+        >
+          <Github className="w-4 h-4 text-cyan-400 group-hover:rotate-12 transition-transform" />
+          <span className="font-mono font-medium">{connectedRepoName}</span>
           <span className="text-slate-500">::</span>
-          <span className="text-cyan-400 font-mono">main@a1b2c3d</span>
-        </div>
+          <span className="text-cyan-400 font-mono">main</span>
+        </button>
 
         <div className="relative w-64">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search buildings, APIs, functions..."
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-surface/80 border border-border text-xs text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition"
@@ -51,8 +61,28 @@ export const HeaderNavbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons & Language Switcher */}
       <div className="flex items-center gap-3">
+        {/* Language Switcher (RU / EN) */}
+        <div className="flex items-center rounded-lg bg-surface border border-border p-0.5 text-xs font-mono">
+          <button
+            onClick={() => setLanguage('ru')}
+            className={`px-2 py-1 rounded-md transition ${
+              language === 'ru' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            RU 🇷🇺
+          </button>
+          <button
+            onClick={() => setLanguage('en')}
+            className={`px-2 py-1 rounded-md transition ${
+              language === 'en' ? 'bg-cyan-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            EN 🇬🇧
+          </button>
+        </div>
+
         {/* Live Telemetry Stream Indicator */}
         <button
           onClick={toggleLiveStreaming}
@@ -63,7 +93,7 @@ export const HeaderNavbar: React.FC = () => {
           }`}
         >
           <Zap className={`w-3.5 h-3.5 ${isLiveStreaming ? 'text-emerald-400 animate-bounce' : ''}`} />
-          {isLiveStreaming ? 'LIVE TELEMETRY ON' : 'PAUSED'}
+          {isLiveStreaming ? t('liveTelemetryOn') : t('liveTelemetryPaused')}
         </button>
 
         {/* Live Spatial Debugger Toggle */}
@@ -76,7 +106,7 @@ export const HeaderNavbar: React.FC = () => {
           }`}
         >
           <Bug className="w-3.5 h-3.5 text-rose-400" />
-          Spatial Debugger
+          {t('spatialDebugger')}
         </button>
 
         {/* AI Copilot Drawer Toggle */}
@@ -90,7 +120,7 @@ export const HeaderNavbar: React.FC = () => {
         >
           <Bot className="w-4 h-4 text-cyan-400" />
           <Sparkles className="w-3 h-3 text-purple-400" />
-          AI Graph Copilot
+          {t('aiGraphCopilot')}
         </button>
       </div>
     </header>

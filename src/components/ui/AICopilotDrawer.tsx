@@ -7,6 +7,7 @@ export const AICopilotDrawer: React.FC = () => {
   const toggleAICopilot = useAtlasStore((s) => s.toggleAICopilot);
   const selectedBuildingId = useAtlasStore((s) => s.selectedBuildingId);
   const buildings = useAtlasStore((s) => s.buildings);
+  const t = useAtlasStore((s) => s.t);
 
   const [inputQuery, setInputQuery] = useState('');
   const [messages, setMessages] = useState<
@@ -14,7 +15,7 @@ export const AICopilotDrawer: React.FC = () => {
   >([
     {
       sender: 'ai',
-      text: "Hello! I am the Atlas X AI reasoning engine. I have parsed your Neo4j code graph, OTel traces, and ASTs. Ask me about your system's architecture, bottlenecks, or technical debt.",
+      text: t('aiWelcome'),
     },
   ]);
 
@@ -27,22 +28,21 @@ export const AICopilotDrawer: React.FC = () => {
 
     setMessages((prev) => [...prev, { sender: 'user', text: userText }]);
 
-    // Simulate Neo4j Graph-RAG response with visual graph nodes
     setTimeout(() => {
-      let aiReply = "Analyzing code graph topology...";
+      let aiReply = "Анализ топологии графа кода в Neo4j...";
       let nodes: string[] = [];
 
       if (userText.toLowerCase().includes('checkout') || userText.toLowerCase().includes('order')) {
         aiReply =
-          "The Checkout flow involves 3 microservices and 2 databases. High P99 latency (145ms) originates in checkout.controller.ts during synchronous Stripe SDK calls.";
+          "Процесс Checkout задействует 3 микросервиса. Высокая задержка P99 (145ms) вызвана синхронными вызовами Stripe SDK в checkout.controller.ts.";
         nodes = ['checkout.controller.ts', 'stripe.processor.ts', 'PostgreSQL Orders DB'];
       } else if (userText.toLowerCase().includes('auth') || userText.toLowerCase().includes('token')) {
         aiReply =
-          "Authentication flows through auth.service.ts. It executes 1,200 req/s with 94% cache hits on Redis L2 Cluster.";
+          "Аутентификация проходит через auth.service.ts. Обрабатывает 1200 req/s с 94% попаданий в кэш Redis.";
         nodes = ['auth.service.ts', 'jwt.strategy.ts', 'Redis L2 Cluster'];
       } else {
         aiReply =
-          "I have traced your query across the repository knowledge graph. The selected building relies on 2 upstream handlers and 1 persistent cache.";
+          "Я отследил ваш запрос по графу знаний репозитория. Выбранный узел опирается на 2 обработчика и 1 кэш.";
         nodes = [buildings.find((b) => b.id === selectedBuildingId)?.name || 'router.ts'];
       }
 
@@ -67,10 +67,10 @@ export const AICopilotDrawer: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-sm text-white flex items-center gap-1.5">
-              AI Graph Copilot
+              {t('aiTitle')}
               <Sparkles className="w-3 h-3 text-cyan-400" />
             </h3>
-            <p className="text-[10px] text-purple-300 font-mono">Graph-RAG Engine Active</p>
+            <p className="text-[10px] text-purple-300 font-mono">{t('aiSubtitle')}</p>
           </div>
         </div>
         <button onClick={toggleAICopilot} className="text-slate-400 hover:text-white p-1 rounded-lg">
@@ -97,7 +97,6 @@ export const AICopilotDrawer: React.FC = () => {
               {m.text}
             </div>
 
-            {/* Spatial Graph Nodes Highlight Pills */}
             {m.graphNodes && m.graphNodes.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1 pl-1">
                 {m.graphNodes.map((n, i) => (
@@ -118,16 +117,16 @@ export const AICopilotDrawer: React.FC = () => {
       {/* Preset Query Prompt Chips */}
       <div className="flex gap-1.5 overflow-x-auto pb-2 text-[10px] font-mono">
         <button
-          onClick={() => setInputQuery('Explain checkout flow and latency bottlenecks')}
+          onClick={() => setInputQuery('Заторы в Checkout')}
           className="px-2 py-1 rounded bg-slate-900 text-slate-300 border border-slate-800 hover:border-cyan-500 whitespace-nowrap"
         >
-          Checkout Bottlenecks
+          {t('presetBottlenecks')}
         </button>
         <button
-          onClick={() => setInputQuery('Where is technical debt highest?')}
+          onClick={() => setInputQuery('Технический долг в коде')}
           className="px-2 py-1 rounded bg-slate-900 text-slate-300 border border-slate-800 hover:border-purple-500 whitespace-nowrap"
         >
-          Technical Debt
+          {t('presetTechDebt')}
         </button>
       </div>
 
@@ -135,7 +134,7 @@ export const AICopilotDrawer: React.FC = () => {
       <div className="relative">
         <input
           type="text"
-          placeholder="Ask AI about architecture or code..."
+          placeholder={t('aiPlaceholder')}
           value={inputQuery}
           onChange={(e) => setInputQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}

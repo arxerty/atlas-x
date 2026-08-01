@@ -6,10 +6,9 @@ import { useAtlasStore } from '../../stores/useAtlasStore';
 import { MOCK_DISTRICTS } from '../../data/mockRepositoryTwin';
 import { BuildingMesh } from './BuildingMesh';
 import { DistrictGrid } from './DistrictGrid';
-import { DependencyHighways } from './DependencyHighways';
-import { RuntimeParticleStream } from './RuntimeParticleStream';
+import { TwoLaneRoads } from './TwoLaneRoads';
+import { TelemetryVehicles } from './TelemetryVehicles';
 
-// Camera Interpolator Component
 const CameraController: React.FC = () => {
   const selectedBuildingId = useAtlasStore((s) => s.selectedBuildingId);
   const buildings = useAtlasStore((s) => s.buildings);
@@ -25,7 +24,6 @@ const CameraController: React.FC = () => {
     const targetVec = new THREE.Vector3(tx, ty + 2, tz);
 
     if (controlsRef.current) {
-      // Smooth camera pan target update
       controlsRef.current.target.lerp(targetVec, 0.5);
       controlsRef.current.update();
     }
@@ -36,9 +34,9 @@ const CameraController: React.FC = () => {
       ref={controlsRef}
       enableDamping
       dampingFactor={0.05}
-      maxPolarAngle={Math.PI / 2 - 0.05} // Prevent camera clipping below floor
+      maxPolarAngle={Math.PI / 2 - 0.05}
       minDistance={10}
-      maxDistance={140}
+      maxDistance={150}
     />
   );
 };
@@ -52,46 +50,43 @@ export const SpatialCanvas: React.FC = () => {
   return (
     <div className="w-full h-full relative bg-[#08090C]">
       <Canvas shadows gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}>
-        <PerspectiveCamera makeDefault position={[0, 45, 60]} fov={50} />
+        <PerspectiveCamera makeDefault position={[0, 48, 65]} fov={50} />
         <CameraController />
 
-        {/* Ambient & Directional Cyberpunk Lighting */}
-        <ambientLight intensity={0.4} />
+        {/* Ambient & NYC Cyberpunk Lighting */}
+        <ambientLight intensity={0.45} />
         <directionalLight
-          position={[40, 60, 20]}
-          intensity={1.2}
-          color="#E2E8F0"
+          position={[45, 75, 25]}
+          intensity={1.3}
+          color="#F8FAFC"
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
         />
-        <pointLight position={[0, 30, 0]} intensity={1.5} color="#00F0FF" distance={100} />
-        <pointLight position={[10, 20, -10]} intensity={1.0} color="#7000FF" distance={80} />
+        <pointLight position={[0, 35, 0]} intensity={1.8} color="#00F0FF" distance={120} />
+        <pointLight position={[15, 25, -15]} intensity={1.2} color="#7000FF" distance={90} />
 
-        {/* Atmospheric Volumetric Fog */}
-        <fog attach="fog" args={['#08090C', 50, 160]} />
+        {/* Atmospheric Fog */}
+        <fog attach="fog" args={['#08090C', 55, 170]} />
 
-        {/* Infinite Cyber Grid Floor */}
-        <gridHelper
-          args={[200, 100, '#1E293B', '#0F172A']}
-          position={[0, -0.1, 0]}
-        />
+        {/* Cyber Grid Floor */}
+        <gridHelper args={[220, 110, '#1E293B', '#0F172A']} position={[0, -0.1, 0]} />
 
-        {/* Render District Boundaries */}
+        {/* District Ground Boundaries */}
         {MOCK_DISTRICTS.map((district) => (
           <DistrictGrid key={district.id} district={district} />
         ))}
 
-        {/* Render Building Towers */}
+        {/* NYC Skyscraper Buildings */}
         {buildings.map((b) => (
           <BuildingMesh key={b.id} building={b} />
         ))}
 
-        {/* Dependency Highway Splines */}
-        <DependencyHighways buildings={buildings} selectedBuildingId={selectedBuildingId} />
+        {/* Two-Lane Asphalt Roads */}
+        <TwoLaneRoads buildings={buildings} selectedBuildingId={selectedBuildingId} />
 
-        {/* Live Runtime Dynamic Telemetry Particles */}
-        <RuntimeParticleStream buildings={buildings} isLive={isLive || mode === 'LIVE_RUNTIME'} />
+        {/* Telemetry Vehicles (Speed tied to Latency) */}
+        <TelemetryVehicles buildings={buildings} isLive={isLive || mode === 'LIVE_RUNTIME'} />
       </Canvas>
     </div>
   );

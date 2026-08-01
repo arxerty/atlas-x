@@ -7,6 +7,7 @@ export const LiveDebuggerPanel: React.FC = () => {
   const debuggerFrames = useAtlasStore((s) => s.debuggerFrames);
   const activeDebuggerFrameIndex = useAtlasStore((s) => s.activeDebuggerFrameIndex);
   const setDebuggerFrame = useAtlasStore((s) => s.setDebuggerFrame);
+  const t = useAtlasStore((s) => s.t);
 
   if (!isDebuggerActive) return null;
 
@@ -18,16 +19,16 @@ export const LiveDebuggerPanel: React.FC = () => {
       <div className="flex items-center justify-between border-b border-rose-900/50 pb-2">
         <div className="flex items-center gap-2">
           <Bug className="w-4 h-4 text-rose-400" />
-          <h3 className="font-bold text-xs text-white">Spatial Live Debugger</h3>
+          <h3 className="font-bold text-xs text-white">{t('debuggerTitle')}</h3>
         </div>
         <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-950 text-rose-300 border border-rose-800 flex items-center gap-1">
-          <Pause className="w-2.5 h-2.5" /> BREAKPOINT HIT
+          <Pause className="w-2.5 h-2.5" /> {t('breakpointHit')}
         </span>
       </div>
 
       {/* Call Stack Frames List */}
       <div className="flex flex-col gap-1.5">
-        <span className="text-[10px] uppercase font-mono text-slate-400">Call Stack Trace</span>
+        <span className="text-[10px] uppercase font-mono text-slate-400">{t('callStack')}</span>
         {debuggerFrames.map((frame, idx) => {
           const isActive = idx === activeDebuggerFrameIndex;
           return (
@@ -53,7 +54,7 @@ export const LiveDebuggerPanel: React.FC = () => {
       {/* Floating 3D Variable Inspector Table */}
       <div className="flex flex-col gap-2">
         <span className="text-[10px] uppercase font-mono text-slate-400 flex items-center gap-1">
-          <Variable className="w-3 h-3 text-cyan-400" /> Active Scope Variables
+          <Variable className="w-3 h-3 text-cyan-400" /> {t('activeScope')}
         </span>
         <div className="rounded-xl border border-border bg-surface/80 overflow-hidden divide-y divide-border/60 text-xs font-mono">
           {currentFrame.variables.map((v, i) => (
