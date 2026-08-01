@@ -6,7 +6,7 @@ import { useAtlasStore } from '../../stores/useAtlasStore';
 import { MOCK_DISTRICTS } from '../../data/mockRepositoryTwin';
 import { BuildingMesh } from './BuildingMesh';
 import { DistrictGrid } from './DistrictGrid';
-import { TwoLaneRoads } from './TwoLaneRoads';
+import { MultiLaneRoads } from './MultiLaneRoads';
 import { TelemetryVehicles } from './TelemetryVehicles';
 
 const CameraController: React.FC = () => {
@@ -36,7 +36,7 @@ const CameraController: React.FC = () => {
       dampingFactor={0.05}
       maxPolarAngle={Math.PI / 2 - 0.05}
       minDistance={10}
-      maxDistance={150}
+      maxDistance={155}
     />
   );
 };
@@ -50,42 +50,42 @@ export const SpatialCanvas: React.FC = () => {
   return (
     <div className="w-full h-full relative bg-[#08090C]">
       <Canvas shadows gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}>
-        <PerspectiveCamera makeDefault position={[0, 48, 65]} fov={50} />
+        <PerspectiveCamera makeDefault position={[0, 50, 70]} fov={50} />
         <CameraController />
 
-        {/* Ambient & NYC Cyberpunk Lighting */}
-        <ambientLight intensity={0.45} />
+        {/* Ambient & Manhattan Twilight Lighting (Matching Photo 2) */}
+        <ambientLight intensity={0.5} color="#F1F5F9" />
         <directionalLight
-          position={[45, 75, 25]}
-          intensity={1.3}
-          color="#F8FAFC"
+          position={[50, 80, 30]}
+          intensity={1.4}
+          color="#FEF08A" // Warm sunset golden light
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
         />
-        <pointLight position={[0, 35, 0]} intensity={1.8} color="#00F0FF" distance={120} />
-        <pointLight position={[15, 25, -15]} intensity={1.2} color="#7000FF" distance={90} />
+        <pointLight position={[0, 40, 0]} intensity={2.0} color="#00F0FF" distance={130} />
+        <pointLight position={[20, 30, -20]} intensity={1.4} color="#7000FF" distance={100} />
 
-        {/* Atmospheric Fog */}
-        <fog attach="fog" args={['#08090C', 55, 170]} />
+        {/* Twilight Atmosphere Fog */}
+        <fog attach="fog" args={['#08090C', 60, 180]} />
 
-        {/* Cyber Grid Floor */}
-        <gridHelper args={[220, 110, '#1E293B', '#0F172A']} position={[0, -0.1, 0]} />
+        {/* Ground Grid */}
+        <gridHelper args={[240, 120, '#1E293B', '#0F172A']} position={[0, -0.1, 0]} />
 
-        {/* District Ground Boundaries */}
+        {/* Districts */}
         {MOCK_DISTRICTS.map((district) => (
           <DistrictGrid key={district.id} district={district} />
         ))}
 
-        {/* NYC Skyscraper Buildings */}
+        {/* Manhattan NYC Skyscrapers */}
         {buildings.map((b) => (
           <BuildingMesh key={b.id} building={b} />
         ))}
 
-        {/* Two-Lane Asphalt Roads */}
-        <TwoLaneRoads buildings={buildings} selectedBuildingId={selectedBuildingId} />
+        {/* 4-Lane Avenue Highways */}
+        <MultiLaneRoads buildings={buildings} selectedBuildingId={selectedBuildingId} />
 
-        {/* Telemetry Vehicles (Speed tied to Latency) */}
+        {/* Realistic Traffic Vehicles (Sedans, Yellow Taxis, Vans, SUVs, Motorcycles - Photo 1) */}
         <TelemetryVehicles buildings={buildings} isLive={isLive || mode === 'LIVE_RUNTIME'} />
       </Canvas>
     </div>

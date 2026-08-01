@@ -8,12 +8,13 @@ interface Props {
   isLive: boolean;
 }
 
-interface TelemetryVehicle {
+export type VehicleModelType = 'sedan' | 'taxi' | 'van' | 'suv' | 'motorcycle';
+
+interface RealisticVehicle {
   curve: THREE.CubicBezierCurve3;
   progress: number;
-  speed: number; // Inversely proportional to latencyMs!
-  isRequestLane: boolean;
-  vehicleType: 'car' | 'truck';
+  speed: number; // Inversely proportional to network latencyMs!
+  modelType: VehicleModelType;
   color: string;
   latencyMs: number;
 }
@@ -25,11 +26,12 @@ export const TelemetryVehicles: React.FC<Props> = ({ buildings, isLive }) => {
     return map;
   }, [buildings]);
 
-  const vehicleMeshGroup = useRef<THREE.Group>(null);
+  const vehicleGroupRef = useRef<THREE.Group>(null);
 
-  // Generate Vehicles for two-lane telemetry highways
+  // Generate Realistic Multi-Lane Vehicles (Matching Photo 1 Reference)
   const vehicles = useMemo(() => {
-    const list: TelemetryVehicle[] = [];
+    const list: RealisticVehicle[] = [];
+    const vehicleTypes: VehicleModelType[] = ['sedan', 'taxi', 'van', 'suv', 'motorcycle'];
 
     buildings.forEach((source) => {
       source.dependencies.forEach((targetId) => {
@@ -51,57 +53,61 @@ export const TelemetryVehicles: React.FC<Props> = ({ buildings, isLive }) => {
         );
 
         const dir = end.clone().sub(start).normalize();
-        const perp = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(0.7);
+        const perp = new THREE.Vector3(-dir.z, 0, dir.x);
 
-        // Lane A: Forward Request Lane (+perp)
-        const reqCurve = new THREE.CubicBezierCurve3(
-          start.clone().add(perp),
-          control1.clone().add(perp),
-          control2.clone().add(perp),
-          end.clone().add(perp)
+        // 4-Lane Avenue Curves
+        const laneReq1 = new THREE.CubicBezierCurve3(
+          start.clone().add(perp.clone().multiplyScalar(0.6)),
+          control1.clone().add(perp.clone().multiplyScalar(0.6)),
+          control2.clone().add(perp.clone().multiplyScalar(0.6)),
+          end.clone().add(perp.clone().multiplyScalar(0.6))
         );
-
-        // Lane B: Reverse Response Lane (-perp)
-        const resCurve = new THREE.CubicBezierCurve3(
-          end.clone().sub(perp),
-          control2.clone().sub(perp),
-          control1.clone().sub(perp),
-          start.clone().sub(perp)
+        const laneReq2 = new THREE.CubicBezierCurve3(
+          start.clone().add(perp.clone().multiplyScalar(1.4)),
+          control1.clone().add(perp.clone().multiplyScalar(1.4)),
+          control2.clone().add(perp.clone().multiplyScalar(1.4)),
+          end.clone().add(perp.clone().multiplyScalar(1.4))
+        );
+        const laneRes1 = new THREE.CubicBezierCurve3(
+          end.clone().sub(perp.clone().multiplyScalar(0.6)),
+          control2.clone().sub(perp.clone().multiplyScalar(0.6)),
+          control1.clone().sub(perp.clone().multiplyScalar(0.6)),
+          start.clone().sub(perp.clone().multiplyScalar(0.6))
+        );
+        const laneRes2 = new THREE.CubicBezierCurve3(
+          end.clone().sub(perp.clone().multiplyScalar(1.4)),
+          control2.clone().sub(perp.clone().multiplyScalar(1.4)),
+          control1.clone().sub(perp.clone().multiplyScalar(1.4)),
+          start.clone().sub(perp.clone().multiplyScalar(1.4))
         );
 
         const latency = source.latencyMs || 20;
 
-        // SPEED CALCULATION BASED ON NETWORK LATENCY
-        // Low latency (e.g. 5ms) -> speed ~ 0.5 (Fast sports car)
-        // High latency (e.g. 290ms) -> speed ~ 0.05 (Slow heavy truck in congestion)
-        const speed = Math.max(0.04, Math.min(0.55, 30 / latency));
-        const isHighLatency = latency > 100;
+        // SPEED CALCULATION: Low latency = Fast traffic, High latency = Traffic congestion!
+        const speed = Math.max(0.04, Math.min(0.5, 28 / latency));
 
-        // Forward Request Vehicles
-        for (let i = 0; i < 2; i++) {
-          list.push({
-            curve: reqCurve,
-            progress: i * 0.5 + Math.random() * 0.1,
-            speed,
-            isRequestLane: true,
-            vehicleType: isHighLatency ? 'truck' : 'car',
-            color: isHighLatency ? '#FF0055' : '#00F0FF',
-            latencyMs: latency,
-          });
-        }
+        const curves = [laneReq1, laneReq2, laneRes1, laneRes2];
 
-        // Reverse Response Vehicles
-        for (let i = 0; i < 2; i++) {
-          list.push({
-            curve: resCurve,
-            progress: i * 0.5 + Math.random() * 0.1,
-            speed,
-            isRequestLane: false,
-            vehicleType: isHighLatency ? 'truck' : 'car',
-            color: isHighLatency ? '#FFB800' : '#00FF66',
-            latencyMs: latency,
-          });
-        }
+        // Spawn multiple vehicles across 4 lanes to recreate Photo 1 traffic density
+        curves.forEach((c, cIdx) => {
+          for (let i = 0; i < 3; i++) {
+            const vType = vehicleTypes[(cIdx + i) % vehicleTypes.length];
+            let vColor = '#38BDF8'; // Blue sedan default
+            if (vType === 'taxi') vColor = '#EAB308'; // NYC Yellow Taxi
+            if (vType === 'van') vColor = '#F8FAFC'; // White delivery van
+            if (vType === 'suv') vColor = '#0F172A'; // Black SUV
+            if (vType === 'motorcycle') vColor = '#EF4444'; // Red motorcycle
+
+            list.push({
+              curve: c,
+              progress: (i / 3) + Math.random() * 0.15,
+              speed: speed * (0.85 + Math.random() * 0.3),
+              modelType: vType,
+              color: vColor,
+              latencyMs: latency,
+            });
+          }
+        });
       });
     });
 
@@ -110,7 +116,6 @@ export const TelemetryVehicles: React.FC<Props> = ({ buildings, isLive }) => {
 
   const vehicleMeshRefs = useRef<(THREE.Group | null)[]>([]);
 
-  // Smoothly move vehicles along 2-lane curves at latency-based speed
   useFrame((_, delta) => {
     if (!isLive) return;
 
@@ -128,9 +133,17 @@ export const TelemetryVehicles: React.FC<Props> = ({ buildings, isLive }) => {
   });
 
   return (
-    <group ref={vehicleMeshGroup}>
+    <group ref={vehicleGroupRef}>
       {vehicles.map((v, idx) => {
-        const isTruck = v.vehicleType === 'truck';
+        const isTaxi = v.modelType === 'taxi';
+        const isVan = v.modelType === 'van';
+        const isMotorcycle = v.modelType === 'motorcycle';
+        const isSuv = v.modelType === 'suv';
+
+        const length = isVan ? 1.4 : isMotorcycle ? 0.6 : isSuv ? 1.1 : 0.9;
+        const height = isVan ? 0.6 : isMotorcycle ? 0.3 : isSuv ? 0.45 : 0.35;
+        const width = isMotorcycle ? 0.2 : isVan ? 0.65 : 0.45;
+
         return (
           <group
             key={idx}
@@ -138,30 +151,68 @@ export const TelemetryVehicles: React.FC<Props> = ({ buildings, isLive }) => {
               vehicleMeshRefs.current[idx] = el;
             }}
           >
-            {/* Vehicle Chassis Box */}
-            <mesh position={[0, isTruck ? 0.35 : 0.2, 0]}>
-              <boxGeometry args={[isTruck ? 1.4 : 0.9, isTruck ? 0.6 : 0.3, isTruck ? 0.6 : 0.4]} />
-              <meshStandardMaterial color={v.color} metalness={0.8} roughness={0.2} emissive={v.color} emissiveIntensity={0.3} />
+            {/* Main Vehicle Chassis Box */}
+            <mesh position={[0, height / 2, 0]}>
+              <boxGeometry args={[length, height, width]} />
+              <meshStandardMaterial color={v.color} metalness={0.7} roughness={0.2} />
             </mesh>
 
-            {/* Glowing White LED Headlights (Front) */}
-            <mesh position={[isTruck ? 0.72 : 0.47, isTruck ? 0.2 : 0.15, 0.15]}>
-              <sphereGeometry args={[0.08, 8, 8]} />
+            {/* Cabin Glass Windshield (for cars/taxis/suvs) */}
+            {!isMotorcycle && (
+              <mesh position={[0, height * 0.8, 0]}>
+                <boxGeometry args={[length * 0.55, height * 0.5, width * 0.85]} />
+                <meshStandardMaterial color="#1E293B" metalness={0.9} roughness={0.1} transparent opacity={0.8} />
+              </mesh>
+            )}
+
+            {/* Yellow NYC Taxi Roof Sign Box (Matching Photo 1 Taxis) */}
+            {isTaxi && (
+              <mesh position={[0, height + 0.1, 0]}>
+                <boxGeometry args={[0.25, 0.1, 0.15]} />
+                <meshBasicMaterial color="#FFD700" />
+              </mesh>
+            )}
+
+            {/* 4 Black Wheels */}
+            {!isMotorcycle && (
+              <>
+                <mesh position={[length * 0.28, 0.08, width * 0.48]}>
+                  <cylinderGeometry args={[0.08, 0.08, 0.05, 12]} rotation={[Math.PI / 2, 0, 0]} />
+                  <meshBasicMaterial color="#000000" />
+                </mesh>
+                <mesh position={[-length * 0.28, 0.08, width * 0.48]}>
+                  <cylinderGeometry args={[0.08, 0.08, 0.05, 12]} rotation={[Math.PI / 2, 0, 0]} />
+                  <meshBasicMaterial color="#000000" />
+                </mesh>
+                <mesh position={[length * 0.28, 0.08, -width * 0.48]}>
+                  <cylinderGeometry args={[0.08, 0.08, 0.05, 12]} rotation={[Math.PI / 2, 0, 0]} />
+                  <meshBasicMaterial color="#000000" />
+                </mesh>
+                <mesh position={[-length * 0.28, 0.08, -width * 0.48]}>
+                  <cylinderGeometry args={[0.08, 0.08, 0.05, 12]} rotation={[Math.PI / 2, 0, 0]} />
+                  <meshBasicMaterial color="#000000" />
+                </mesh>
+              </>
+            )}
+
+            {/* Glowing White LED Headlights (Front - Photo 1) */}
+            <mesh position={[length / 2 + 0.02, height * 0.4, width * 0.35]}>
+              <sphereGeometry args={[0.06, 8, 8]} />
               <meshBasicMaterial color="#FFFFFF" />
             </mesh>
-            <mesh position={[isTruck ? 0.72 : 0.47, isTruck ? 0.2 : 0.15, -0.15]}>
-              <sphereGeometry args={[0.08, 8, 8]} />
+            <mesh position={[length / 2 + 0.02, height * 0.4, -width * 0.35]}>
+              <sphereGeometry args={[0.06, 8, 8]} />
               <meshBasicMaterial color="#FFFFFF" />
             </mesh>
 
-            {/* Glowing Red Taillights (Rear) */}
-            <mesh position={[isTruck ? -0.72 : -0.47, isTruck ? 0.2 : 0.15, 0.15]}>
+            {/* BRIGHT RED LED TAILLIGHTS (Rear - Photo 1 Reference Stream) */}
+            <mesh position={[-length / 2 - 0.02, height * 0.4, width * 0.35]}>
               <sphereGeometry args={[0.07, 8, 8]} />
-              <meshBasicMaterial color="#FF0055" />
+              <meshBasicMaterial color="#FF0033" />
             </mesh>
-            <mesh position={[isTruck ? -0.72 : -0.47, isTruck ? 0.2 : 0.15, -0.15]}>
+            <mesh position={[-length / 2 - 0.02, height * 0.4, -width * 0.35]}>
               <sphereGeometry args={[0.07, 8, 8]} />
-              <meshBasicMaterial color="#FF0055" />
+              <meshBasicMaterial color="#FF0033" />
             </mesh>
           </group>
         );

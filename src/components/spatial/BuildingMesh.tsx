@@ -24,16 +24,16 @@ export const BuildingMesh: React.FC<Props> = ({ building }) => {
   const [posX, posY, posZ] = building.position;
   const [dimX, dimY, dimZ] = building.dimensions;
 
-  // NYC Skyscraper Tier Heights & Setbacks Calculation
-  const baseHeight = Math.max(2, dimY * 0.25);
-  const midHeight = Math.max(3, dimY * 0.55);
-  const crownHeight = Math.max(1.5, dimY * 0.2);
+  // Multi-tier NYC Skyscraper Setback Dimensions (Matching Photo 2)
+  const baseHeight = Math.max(2.5, dimY * 0.25);
+  const midHeight = Math.max(4.0, dimY * 0.55);
+  const crownHeight = Math.max(2.0, dimY * 0.2);
 
   const baseWidth = dimX;
-  const midWidth = dimX * 0.78;
+  const midWidth = dimX * 0.76;
   const crownWidth = dimX * 0.52;
 
-  // Determine material building color
+  // Twilight / Warm Sunset Interior Window Light Color palette
   const getBuildingColor = () => {
     if (mode === 'LIVE_RUNTIME' && building.heatLevel) {
       if (building.heatLevel > 0.7) return '#FF0055';
@@ -44,14 +44,14 @@ export const BuildingMesh: React.FC<Props> = ({ building }) => {
 
   const buildingColor = getBuildingColor();
 
-  // NYC Window Grid Material
+  // Glass & Metallic facade material (Matching NYC Photo 2)
   const windowMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: buildingColor,
-      roughness: 0.15,
-      metalness: 0.85,
+      roughness: 0.1,
+      metalness: 0.9,
       emissive: isSelected ? '#00F0FF' : isHovered ? '#7000FF' : buildingColor,
-      emissiveIntensity: isSelected ? 0.6 : isHovered ? 0.4 : 0.2,
+      emissiveIntensity: isSelected ? 0.65 : isHovered ? 0.45 : 0.25,
     });
   }, [buildingColor, isSelected, isHovered]);
 
@@ -65,13 +65,13 @@ export const BuildingMesh: React.FC<Props> = ({ building }) => {
 
   return (
     <group position={[posX, 0, posZ]}>
-      {/* Street Block Sidewalk Base Curb */}
+      {/* Concrete Sidewalk Base Block */}
       <mesh position={[0, 0.1, 0]}>
-        <boxGeometry args={[baseWidth + 1.2, 0.2, dimZ + 1.2]} />
-        <meshStandardMaterial color="#1E293B" roughness={0.9} />
+        <boxGeometry args={[baseWidth + 1.4, 0.2, dimZ + 1.4]} />
+        <meshStandardMaterial color="#334155" roughness={0.9} />
       </mesh>
 
-      {/* Main NYC Skyscraper Group */}
+      {/* Main NYC Skyscraper Structure */}
       <group
         ref={meshGroupRef}
         onClick={(e) => {
@@ -85,62 +85,68 @@ export const BuildingMesh: React.FC<Props> = ({ building }) => {
         onPointerOut={() => hoverBuilding(null)}
       >
         {building.type === 'database' ? (
-          // NYC Water Tower / Cylinder Industrial Hub
+          // NYC Water Tank Tower / Industrial Cylinder
           <group position={[0, dimY / 2, 0]}>
             <mesh>
-              <cylinderGeometry args={[dimX / 1.4, dimX / 1.4, dimY, 32]} />
-              <meshStandardMaterial color={buildingColor} metalness={0.9} roughness={0.2} emissive={buildingColor} emissiveIntensity={0.2} />
+              <cylinderGeometry args={[dimX / 1.3, dimX / 1.3, dimY, 32]} />
+              <meshStandardMaterial color={buildingColor} metalness={0.9} roughness={0.15} emissive={buildingColor} emissiveIntensity={0.25} />
             </mesh>
-            {/* Top Ring Cap */}
-            <mesh position={[0, dimY / 2 + 0.3, 0]}>
-              <cylinderGeometry args={[dimX / 1.2, dimX / 1.2, 0.6, 32]} />
-              <meshStandardMaterial color="#FFB800" emissive="#FFB800" emissiveIntensity={0.4} />
+            {/* Top Roof Cap */}
+            <mesh position={[0, dimY / 2 + 0.35, 0]}>
+              <cylinderGeometry args={[dimX / 1.1, dimX / 1.1, 0.7, 32]} />
+              <meshStandardMaterial color="#FFB800" emissive="#FFB800" emissiveIntensity={0.45} />
             </mesh>
           </group>
         ) : building.type === 'cache' ? (
           // Hexagonal Power Station
           <group position={[0, dimY / 2, 0]}>
             <mesh>
-              <cylinderGeometry args={[dimX / 1.4, dimX / 1.4, dimY, 6]} />
-              <meshStandardMaterial color={buildingColor} metalness={0.9} roughness={0.1} emissive="#00F0FF" emissiveIntensity={0.4} />
+              <cylinderGeometry args={[dimX / 1.3, dimX / 1.3, dimY, 6]} />
+              <meshStandardMaterial color={buildingColor} metalness={0.95} roughness={0.1} emissive="#00F0FF" emissiveIntensity={0.4} />
             </mesh>
           </group>
         ) : (
-          // NYC Skyscraper (Multi-Tier Setbacks)
+          // MANHATTAN NYC SKYSCRAPER (Matching Photo 2)
           <group>
-            {/* Tier 1: Wide Podium Base */}
+            {/* Tier 1: Wide Street Podium Base */}
             <mesh position={[0, baseHeight / 2, 0]}>
               <boxGeometry args={[baseWidth, baseHeight, dimZ]} />
               <primitive object={windowMaterial} attach="material" />
             </mesh>
 
-            {/* Tier 2: Stepped Mid Tower */}
+            {/* Tier 2: Stepped Mid Glass Tower */}
             <mesh position={[0, baseHeight + midHeight / 2, 0]}>
-              <boxGeometry args={[midWidth, midHeight, dimZ * 0.78]} />
+              <boxGeometry args={[midWidth, midHeight, dimZ * 0.76]} />
               <primitive object={windowMaterial} attach="material" />
             </mesh>
 
-            {/* Tier 3: NYC Crown / Top Spire */}
+            {/* Tier 3: Setback Crown */}
             <mesh position={[0, baseHeight + midHeight + crownHeight / 2, 0]}>
               <boxGeometry args={[crownWidth, crownHeight, dimZ * 0.52]} />
               <primitive object={windowMaterial} attach="material" />
             </mesh>
 
-            {/* NYC Rooftop Chrysler/Empire State Style Spire Antenna */}
-            <mesh position={[0, dimY + 2, 0]}>
-              <cylinderGeometry args={[0.08, 0.4, 4, 16]} />
-              <meshStandardMaterial color="#00F0FF" emissive="#00F0FF" emissiveIntensity={0.8} />
+            {/* NYC Chrysler / Empire State Ornamental Spire */}
+            <mesh position={[0, dimY + 2.5, 0]}>
+              <cylinderGeometry args={[0.06, 0.45, 5, 16]} />
+              <meshStandardMaterial color="#00F0FF" emissive="#00F0FF" emissiveIntensity={0.9} />
+            </mesh>
+
+            {/* Rooftop Helipad Ring */}
+            <mesh position={[-crownWidth * 0.2, dimY + 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.4, 0.6, 16]} />
+              <meshBasicMaterial color="#FFB800" side={THREE.DoubleSide} />
             </mesh>
 
             {/* Rooftop HVAC Water Tank Unit */}
-            <mesh position={[crownWidth * 0.25, dimY + 0.5, 0]}>
-              <cylinderGeometry args={[0.4, 0.4, 1, 16]} />
-              <meshStandardMaterial color="#64748B" roughness={0.8} />
+            <mesh position={[crownWidth * 0.25, dimY + 0.6, 0]}>
+              <cylinderGeometry args={[0.45, 0.45, 1.2, 16]} />
+              <meshStandardMaterial color="#475569" roughness={0.8} />
             </mesh>
           </group>
         )}
 
-        {/* Selection Glow Ring at base */}
+        {/* Selection Ring */}
         {(isSelected || isHovered) && (
           <mesh position={[0, 0.25, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <ringGeometry args={[baseWidth * 0.7, baseWidth * 0.95, 32]} />
@@ -154,8 +160,8 @@ export const BuildingMesh: React.FC<Props> = ({ building }) => {
         )}
       </group>
 
-      {/* Spatial 3D Holographic Floating Label */}
-      <Html position={[0, dimY + 3.2, 0]} center distanceFactor={26}>
+      {/* Floating 3D Holographic Label */}
+      <Html position={[0, dimY + 3.8, 0]} center distanceFactor={26}>
         <div
           className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all duration-200 cursor-pointer shadow-2xl backdrop-blur-md flex items-center gap-2 whitespace-nowrap border ${
             isSelected
