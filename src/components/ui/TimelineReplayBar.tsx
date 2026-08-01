@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Play, Pause, SkipBack, SkipForward, GitCommit, Sparkles, FastForward } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, GitCommit, Sparkles } from 'lucide-react';
 import { useAtlasStore } from '../../stores/useAtlasStore';
 
 export const TimelineReplayBar: React.FC = () => {
@@ -15,11 +15,12 @@ export const TimelineReplayBar: React.FC = () => {
   const setReplaySpeed = useAtlasStore((s) => s.setReplaySpeed);
   const t = useAtlasStore((s) => s.t);
 
-  // AUTOMATED CONTINUOUS REPLAY TIMER
+  // AUTOMATED SILKY-SMOOTH CONTINUOUS REPLAY TIMER
   useEffect(() => {
     if (!isReplayPlaying || mode !== 'REPLAY') return;
 
-    const intervalMs = Math.max(300, 2000 / replaySpeed);
+    // Give 1.8s per commit step at 1x speed so LERP morphing finishes gracefully
+    const intervalMs = Math.max(500, 2200 / replaySpeed);
     const timer = setInterval(() => {
       nextCommit();
     }, intervalMs);
@@ -41,7 +42,7 @@ export const TimelineReplayBar: React.FC = () => {
           {isReplayPlaying && (
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-700 animate-pulse flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-              AUTO PLAYING
+              SMOOTH AUTO REPLAY
             </span>
           )}
         </div>
