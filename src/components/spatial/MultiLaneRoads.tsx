@@ -7,129 +7,121 @@ interface Props {
   selectedBuildingId: string | null;
 }
 
-export interface MultiLaneRoadSegment {
+export interface GridRoadCorridor {
   id: string;
-  sourceId: string;
-  targetId: string;
-  laneCurves: {
-    forwardFast: THREE.CubicBezierCurve3;
-    forwardSlow: THREE.CubicBezierCurve3;
-    reverseFast: THREE.CubicBezierCurve3;
-    reverseSlow: THREE.CubicBezierCurve3;
-  };
-  latencyMs: number;
+  isVertical: boolean; // True for N-S avenues, False for E-W streets
+  coord: number; // Constant X or Z position
+  start: number;
+  end: number;
 }
 
 export const MultiLaneRoads: React.FC<Props> = ({ buildings, selectedBuildingId }) => {
-  const buildingMap = useMemo(() => {
-    const map = new Map<string, BuildingNodeData>();
-    buildings.forEach((b) => map.set(b.id, b));
-    return map;
-  }, [buildings]);
+  // STRICT GRID STREET CORRIDORS
+  // Roads run strictly along X and Z grid corridor lines separating urban blocks!
+  const roadCorridors = useMemo(() => {
+    const corridors: GridRoadCorridor[] = [];
+    const blockStride = 16; // 11m block + 5m corridor
+    
+    // We have a 6x6 grid. The grid spans from roughly -48 to +48
+    // So the corridors are at -40, -24, -8, 8, 24, 40 (between blocks)
+    // Actually, block centers are at (c - 3 + 0.5)*16 = -40, -24, -8, 8, 24, 40
+    // The edges between blocks are at -32, -16, 0, 16, 32
+    
+    const roadBounds = 48; // Don't extend roads past the Island mesh (52)
 
-  const roadSegments = useMemo(() => {
-    const segments: MultiLaneRoadSegment[] = [];
-
-    buildings.forEach((source) => {
-      source.dependencies.forEach((targetId) => {
-        const target = buildingMap.get(targetId);
-        if (!target) return;
-
-        const start = new THREE.Vector3(source.position[0], 0.15, source.position[2]);
-        const end = new THREE.Vector3(target.position[0], 0.15, target.position[2]);
-
-        const control1 = new THREE.Vector3(
-          start.x + (end.x - start.x) * 0.33,
-          0.15,
-          start.z + (end.z - start.z) * 0.33
-        );
-        const control2 = new THREE.Vector3(
-          start.x + (end.x - start.x) * 0.66,
-          0.15,
-          start.z + (end.z - start.z) * 0.66
-        );
-
-        const dir = end.clone().sub(start).normalize();
-        const perp = new THREE.Vector3(-dir.z, 0, dir.x);
-
-        // 4-Lane Avenue Offsets (Matching Photo 1)
-        const offsetInnerReq = perp.clone().multiplyScalar(0.6);
-        const offsetOuterReq = perp.clone().multiplyScalar(1.4);
-        const offsetInnerRes = perp.clone().multiplyScalar(-0.6);
-        const offsetOuterRes = perp.clone().multiplyScalar(-1.4);
-
-        segments.push({
-          id: `${source.id}<->${targetId}`,
-          sourceId: source.id,
-          targetId,
-          laneCurves: {
-            forwardFast: new THREE.CubicBezierCurve3(
-              start.clone().add(offsetInnerReq),
-              control1.clone().add(offsetInnerReq),
-              control2.clone().add(offsetInnerReq),
-              end.clone().add(offsetInnerReq)
-            ),
-            forwardSlow: new THREE.CubicBezierCurve3(
-              start.clone().add(offsetOuterReq),
-              control1.clone().add(offsetOuterReq),
-              control2.clone().add(offsetOuterReq),
-              end.clone().add(offsetOuterReq)
-            ),
-            reverseFast: new THREE.CubicBezierCurve3(
-              end.clone().add(offsetInnerRes),
-              control2.clone().add(offsetInnerRes),
-              control1.clone().add(offsetInnerRes),
-              start.clone().add(offsetInnerRes)
-            ),
-            reverseSlow: new THREE.CubicBezierCurve3(
-              end.clone().add(offsetOuterRes),
-              control2.clone().add(offsetOuterRes),
-              control1.clone().add(offsetOuterRes),
-              start.clone().add(offsetOuterRes)
-            ),
-          },
-          latencyMs: source.latencyMs || 20,
-        });
+    // Vertical Avenues (N-S)
+    for (let c = -2; c <= 2; c++) {
+      const x = c * blockStride; // -32, -16, 0, 16, 32
+      corridors.push({
+        id: `ave-${c}`,
+        isVertical: true,
+        coord: x,
+        start: -roadBounds,
+        end: roadBounds,
       });
-    });
+    }
 
-    return segments;
-  }, [buildings, buildingMap]);
+    // Horizontal Streets (E-W)
+    for (let r = -2; r <= 2; r++) {
+      const z = r * blockStride; // -32, -16, 0, 16, 32
+      corridors.push({
+        id: `st-${r}`,
+        isVertical: false,
+        coord: z,
+        start: -roadBounds,
+        end: roadBounds,
+      });
+    }
+
+    return corridors;
+  }, []);
 
   return (
-    <group>
-      {roadSegments.map((segment) => {
-        const isHighlighted =
-          selectedBuildingId === segment.sourceId || selectedBuildingId === segment.targetId;
+    <group position={[0, 0.12, 0]}>
+      {roadCorridors.map((c) => {
+        const roadWidth = 4.2;
+        const length = c.end - c.start;
+        const midPos = (c.start + c.end) / 2;
 
-        const innerPoints = segment.laneCurves.forwardFast.getPoints(40);
-        const innerGeom = new THREE.BufferGeometry().setFromPoints(innerPoints);
+        if (c.isVertical) {
+          // N-S Vertical Avenue
+          return (
+            <group key={c.id} position={[c.coord, 0, midPos]}>
+              {/* Solid Dark Asphalt Road Surface */}
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[roadWidth, length]} />
+                <meshStandardMaterial color="#0F172A" roughness={0.85} />
+              </mesh>
 
-        const outerPoints = segment.laneCurves.forwardSlow.getPoints(40);
-        const outerGeom = new THREE.BufferGeometry().setFromPoints(outerPoints);
+              {/* Left Solid White Boundary Line */}
+              <mesh position={[-roadWidth / 2 + 0.1, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.15, length]} />
+                <meshBasicMaterial color="#FFFFFF" />
+              </mesh>
 
-        return (
-          <group key={segment.id}>
-            {/* Inner Lane Marking */}
-            <line geometry={innerGeom}>
-              <lineBasicMaterial
-                color={isHighlighted ? '#00F0FF' : '#475569'}
-                linewidth={isHighlighted ? 4 : 2}
-                transparent
-                opacity={0.85}
-              />
-            </line>
-            {/* Outer Lane Marking */}
-            <line geometry={outerGeom}>
-              <lineBasicMaterial
-                color={isHighlighted ? '#00F0FF' : '#334155'}
-                linewidth={1}
-                transparent
-                opacity={0.5}
-              />
-            </line>
-          </group>
-        );
+              {/* Right Solid White Boundary Line */}
+              <mesh position={[roadWidth / 2 - 0.1, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.15, length]} />
+                <meshBasicMaterial color="#FFFFFF" />
+              </mesh>
+
+              {/* Dashed White Center Line */}
+              <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.18, length]} />
+                <meshBasicMaterial color="#FFFFFF" transparent opacity={0.85} />
+              </mesh>
+            </group>
+          );
+        } else {
+          // E-W Horizontal Street
+          return (
+            <group key={c.id} position={[midPos, 0, c.coord]} rotation={[0, Math.PI / 2, 0]}>
+              {/* Solid Dark Asphalt Road Surface */}
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[roadWidth, length]} />
+                <meshStandardMaterial color="#0F172A" roughness={0.85} />
+              </mesh>
+
+              {/* Left Solid White Boundary Line */}
+              <mesh position={[-roadWidth / 2 + 0.1, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.15, length]} />
+                <meshBasicMaterial color="#FFFFFF" />
+              </mesh>
+
+              {/* Right Solid White Boundary Line */}
+              <mesh position={[roadWidth / 2 - 0.1, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.15, length]} />
+                <meshBasicMaterial color="#FFFFFF" />
+              </mesh>
+
+              {/* Dashed White Center Line */}
+              <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.18, length]} />
+                <meshBasicMaterial color="#FFFFFF" transparent opacity={0.85} />
+              </mesh>
+            </group>
+          );
+        }
       })}
     </group>
   );

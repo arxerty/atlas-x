@@ -8,36 +8,47 @@ import { TimelineReplayBar } from './components/ui/TimelineReplayBar';
 import { WhatIfSimulationModal } from './components/ui/WhatIfSimulationModal';
 import { LiveDebuggerPanel } from './components/ui/LiveDebuggerPanel';
 import { GitHubConnectModal } from './components/ui/GitHubConnectModal';
+import { OnboardingScreen } from './components/ui/OnboardingScreen';
+import { useAtlasStore } from './stores/useAtlasStore';
 
 export function App() {
+  const hasInitializedRepo = useAtlasStore((s) => s.hasInitializedRepo);
+
   return (
     <main className="w-screen h-screen relative overflow-hidden bg-[#08090C]">
-      {/* 3D WebGL Spatial NYC Canvas */}
-      <SpatialCanvas />
+      {/* Onboarding Landing Screen displayed before loading into 3D city */}
+      {!hasInitializedRepo ? (
+        <OnboardingScreen />
+      ) : (
+        <>
+          {/* 3D WebGL Spatial NYC Canvas */}
+          <SpatialCanvas />
 
-      {/* Top Navbar */}
-      <HeaderNavbar />
+          {/* Top Navbar */}
+          <HeaderNavbar />
 
-      {/* Top Mode Switcher Bar */}
-      <ModeSwitcherBar />
+          {/* Top Mode Switcher Bar */}
+          <ModeSwitcherBar />
 
-      {/* Building & Code Inspector Drawer */}
-      <InspectorDrawer />
+          {/* Building & Code Inspector Drawer */}
+          <InspectorDrawer />
 
-      {/* AI Graph Copilot Drawer */}
-      <AICopilotDrawer />
+          {/* AI Graph Copilot Drawer */}
+          <AICopilotDrawer />
 
-      {/* Git Commit Architecture Replay Timeline */}
-      <TimelineReplayBar />
+          {/* Git Commit Architecture Replay Timeline */}
+          <TimelineReplayBar />
 
-      {/* What-If Architecture Simulation Panel */}
-      <WhatIfSimulationModal />
+          {/* What-If Architecture Simulation Panel */}
+          <WhatIfSimulationModal />
 
-      {/* Live Spatial Debugger Panel */}
-      <LiveDebuggerPanel />
+          {/* Live Spatial Debugger Panel */}
+          <LiveDebuggerPanel />
 
-      {/* GitHub Connection Modal */}
-      <GitHubConnectModal />
+          {/* GitHub Connection Modal */}
+          <GitHubConnectModal />
+        </>
+      )}
     </main>
   );
 }

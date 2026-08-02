@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Sky, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAtlasStore } from '../../stores/useAtlasStore';
 import { MOCK_DISTRICTS } from '../../data/mockRepositoryTwin';
@@ -36,7 +36,7 @@ const CameraController: React.FC = () => {
       dampingFactor={0.05}
       maxPolarAngle={Math.PI / 2 - 0.05}
       minDistance={10}
-      maxDistance={155}
+      maxDistance={250}
     />
   );
 };
@@ -48,44 +48,82 @@ export const SpatialCanvas: React.FC = () => {
   const mode = useAtlasStore((s) => s.mode);
 
   return (
-    <div className="w-full h-full relative bg-[#08090C]">
+    <div className="w-full h-full relative bg-[#0F172A]">
+      {/* High Performance Realistic Graphics Engine */}
       <Canvas shadows gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}>
-        <PerspectiveCamera makeDefault position={[0, 50, 70]} fov={50} />
+        <PerspectiveCamera makeDefault position={[0, 85, 120]} fov={45} />
         <CameraController />
 
-        {/* Ambient & Manhattan Twilight Lighting (Matching Photo 2) */}
-        <ambientLight intensity={0.5} color="#F1F5F9" />
+        {/* ATMOSPHERIC SKY & ENVIRONMENT MAP (HDRI Reflections) */}
+        <Sky distance={450000} sunPosition={[120, 40, 80]} inclination={0.4} azimuth={0.25} />
+        <Environment preset="city" />
+
+        {/* Realistic Lighting setup matching the Sky sunPosition */}
+        <ambientLight intensity={0.6} color="#F8FAFC" />
         <directionalLight
-          position={[50, 80, 30]}
-          intensity={1.4}
-          color="#FEF08A" // Warm sunset golden light
+          position={[120, 160, 80]}
+          intensity={1.5}
+          color="#FFFAEB"
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
+          shadow-camera-left={-80}
+          shadow-camera-right={80}
+          shadow-camera-top={80}
+          shadow-camera-bottom={-80}
         />
-        <pointLight position={[0, 40, 0]} intensity={2.0} color="#00F0FF" distance={130} />
-        <pointLight position={[20, 30, -20]} intensity={1.4} color="#7000FF" distance={100} />
+        <directionalLight position={[-60, 60, -40]} intensity={0.3} color="#BAE6FD" />
 
-        {/* Twilight Atmosphere Fog */}
-        <fog attach="fog" args={['#08090C', 60, 180]} />
+        {/* Soft Fog to blend the horizon */}
+        <fog attach="fog" args={['#87CEEB', 150, 450]} />
 
-        {/* Ground Grid */}
-        <gridHelper args={[240, 120, '#1E293B', '#0F172A']} position={[0, -0.1, 0]} />
+        {/* ISLAND GEOMETRY & WATER */}
+        <group position={[0, -0.1, 0]}>
+          {/* Infinite Ocean Water Plane */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
+            <planeGeometry args={[1000, 1000]} />
+            <meshStandardMaterial 
+              color="#023E8A" 
+              roughness={0.05} 
+              metalness={0.95} 
+            />
+          </mesh>
 
-        {/* Districts */}
+          {/* Unified Manhattan Island Base Plate */}
+          {/* The grid is 6x6 blocks. Each block is 16. Total size ~ 96x96 */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+            {/* Box with rounded edges would be ideal, but standard box is fine for now */}
+            <boxGeometry args={[104, 104, 0.4]} />
+            <meshStandardMaterial color="#334155" roughness={0.9} />
+          </mesh>
+          
+          {/* Central Park (Integrated directly in the center void of the grid) */}
+          <mesh position={[0, 0.22, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+            <planeGeometry args={[32, 64]} />
+            <meshStandardMaterial color="#166534" roughness={0.8} />
+          </mesh>
+
+          {/* Central Park Reservoir Lake */}
+          <mesh position={[0, 0.24, -10]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[20, 24]} />
+            <meshStandardMaterial color="#0284C7" roughness={0.1} metalness={0.9} />
+          </mesh>
+        </group>
+
+        {/* District Boundaries */}
         {MOCK_DISTRICTS.map((district) => (
           <DistrictGrid key={district.id} district={district} />
         ))}
 
-        {/* Manhattan NYC Skyscrapers */}
+        {/* BUILDINGS SITTING STRICTLY INSIDE URBAN BLOCKS */}
         {buildings.map((b) => (
           <BuildingMesh key={b.id} building={b} />
         ))}
 
-        {/* 4-Lane Avenue Highways */}
+        {/* Straight Street Grid Corridors */}
         <MultiLaneRoads buildings={buildings} selectedBuildingId={selectedBuildingId} />
 
-        {/* Realistic Traffic Vehicles (Sedans, Yellow Taxis, Vans, SUVs, Motorcycles - Photo 1) */}
+        {/* Vehicles */}
         <TelemetryVehicles buildings={buildings} isLive={isLive || mode === 'LIVE_RUNTIME'} />
       </Canvas>
     </div>

@@ -16,6 +16,7 @@ export interface BuildingNodeData {
   type: 'file' | 'database' | 'cache' | 'queue' | 'microservice';
   position: [number, number, number]; // [x, y, z]
   dimensions: [number, number, number]; // [width, height, depth]
+  baseHeight: number; // FIXED BASE HEIGHT PREVENTING REPLAY HEIGHT INFLATION BUG
   color: string;
   linesOfCode: number;
   complexity: number;
@@ -43,16 +44,6 @@ export interface GitCommitData {
   changesCount: number;
   aiNarration: string;
   modifiedNodeIds: string[];
-}
-
-export interface TelemetryParticle {
-  id: string;
-  sourceId: string;
-  targetId: string;
-  progress: number; // 0 to 1
-  speed: number;
-  isError: boolean;
-  type: 'HTTP' | 'SQL' | 'CACHE' | 'QUEUE';
 }
 
 export interface SimulationScenario {

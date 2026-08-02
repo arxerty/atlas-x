@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { TwinMode, BuildingNodeData, GitCommitData, SimulationScenario, DebuggerFrame } from '../types/atlas';
 import { MOCK_BUILDINGS, MOCK_COMMITS, MOCK_SIMULATIONS, MOCK_DEBUGGER_FRAMES } from '../data/mockRepositoryTwin';
 import { Language, TRANSLATIONS } from '../lib/i18n';
+import { fetchGitHubMetadata, fetchGitHubCommits, synthesizeBuildingsForRepo } from '../lib/githubApi';
 
 export interface RepositoryOption {
   slug: string;
@@ -21,65 +22,92 @@ export const POPULAR_REPOSITORIES: RepositoryOption[] = [
 ];
 
 interface AtlasState {
-  // Language (i18n)
+  hasInitializedRepo: boolean;
+  isParsingRepo: boolean;
+  parseProgressMessage: string;
+  fetchAndLoadGithubRepo: (repoSlug: string) => Promise<void>;
+
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: keyof typeof TRANSLATIONS['en']) => string;
 
-  // Single-player mode & Twin State
   mode: TwinMode;
   selectedBuildingId: string | null;
   hoveredBuildingId: string | null;
   buildings: BuildingNodeData[];
   
-  // GitHub Integration & Repositories
   isGithubModalOpen: boolean;
   setGithubModalOpen: (open: boolean) => void;
   connectedRepoName: string;
   connectRepo: (repoSlug: string) => void;
 
-  // Replay Auto-Playback State
   isReplayPlaying: boolean;
-  replaySpeed: number; // 1, 2, 5
+  replaySpeed: number;
   toggleReplayPlay: () => void;
   setReplaySpeed: (speed: number) => void;
 
-  // Mode setters
   setMode: (mode: TwinMode) => void;
   selectBuilding: (id: string | null) => void;
   hoverBuilding: (id: string | null) => void;
 
-  // Live Telemetry
   isLiveStreaming: boolean;
   toggleLiveStreaming: () => void;
 
-  // Replay Timeline
   activeCommitIndex: number;
   setActiveCommitIndex: (index: number) => void;
   nextCommit: () => void;
   commits: GitCommitData[];
 
-  // Simulation
   activeSimulation: SimulationScenario | null;
   setActiveSimulation: (sim: SimulationScenario | null) => void;
 
-  // AI Assistant
   isAICopilotOpen: boolean;
   toggleAICopilot: () => void;
 
-  // Live Debugger
   isDebuggerActive: boolean;
   activeDebuggerFrameIndex: number;
   toggleDebugger: () => void;
   setDebuggerFrame: (index: number) => void;
   debuggerFrames: DebuggerFrame[];
 
-  // Search
   searchQuery: string;
   setSearchQuery: (query: string) => void;
 }
 
 export const useAtlasStore = create<AtlasState>((set, get) => ({
+  hasInitializedRepo: false,
+  isParsingRepo: false,
+  parseProgressMessage: '',
+
+  fetchAndLoadGithubRepo: async (repoSlug: string) => {
+    const cleanSlug = repoSlug.replace('https://github.com/', '').replace('.git', '') || 'facebook/react';
+    set({ isParsingRepo: true, parseProgressMessage: '[1/4] Connecting to GitHub REST API...' });
+
+    const meta = await fetchGitHubMetadata(cleanSlug);
+    set({ parseProgressMessage: `[2/4] Parsing Tree-sitter ASTs for ${meta.full_name}...` });
+
+    await new Promise((r) => setTimeout(r, 600));
+    set({ parseProgressMessage: '[3/4] Synthesizing Neo4j Code Graph & Dependencies...' });
+
+    const fetchedCommits = await fetchGitHubCommits(cleanSlug);
+    const synthesizedBuildings = synthesizeBuildingsForRepo(cleanSlug);
+
+    await new Promise((r) => setTimeout(r, 600));
+    set({ parseProgressMessage: '[4/4] Building NYC WebGPU 3D Digital Twin Engine...' });
+
+    await new Promise((r) => setTimeout(r, 500));
+
+    set({
+      connectedRepoName: cleanSlug,
+      buildings: synthesizedBuildings,
+      commits: fetchedCommits,
+      activeCommitIndex: 0,
+      isParsingRepo: false,
+      hasInitializedRepo: true,
+      isGithubModalOpen: false,
+    });
+  },
+
   language: 'ru',
   setLanguage: (lang) => set({ language: lang }),
   t: (key) => {
@@ -97,24 +125,7 @@ export const useAtlasStore = create<AtlasState>((set, get) => ({
   connectedRepoName: 'facebook/react',
 
   connectRepo: (repoSlug: string) => {
-    const cleanName = repoSlug.replace('https://github.com/', '').replace('.git', '');
-    
-    // Generate repo-specific twin metrics
-    const updatedBuildings = get().buildings.map((b) => ({
-      ...b,
-      linesOfCode: Math.floor(b.linesOfCode * (0.75 + Math.random() * 0.5)),
-      dimensions: [
-        b.dimensions[0],
-        Math.max(6, b.dimensions[1] + Math.floor((Math.random() - 0.5) * 8)),
-        b.dimensions[2],
-      ] as [number, number, number],
-    }));
-
-    set({
-      connectedRepoName: cleanName || 'custom/imported-repo',
-      buildings: updatedBuildings,
-      isGithubModalOpen: false,
-    });
+    get().fetchAndLoadGithubRepo(repoSlug);
   },
 
   isReplayPlaying: false,
@@ -130,17 +141,22 @@ export const useAtlasStore = create<AtlasState>((set, get) => ({
   toggleLiveStreaming: () => set((state) => ({ isLiveStreaming: !state.isLiveStreaming })),
 
   activeCommitIndex: 0,
+
+  // FIXED DETERMINISTIC COMMIT REPLAY (PREVENTS ENDLESS HEIGHT INFLATION)
   setActiveCommitIndex: (index) => {
     const commits = get().commits;
     const targetCommit = commits[index];
 
     const updatedBuildings = get().buildings.map((b) => {
       const isModified = targetCommit?.modifiedNodeIds.includes(b.id);
+      // Calculate target height deterministically relative to b.baseHeight!
+      const targetH = isModified ? b.baseHeight * 1.3 : b.baseHeight;
+
       return {
         ...b,
         dimensions: [
           b.dimensions[0],
-          Math.max(5, Math.floor(b.dimensions[1] * (isModified ? 1.25 : 0.96))),
+          targetH,
           b.dimensions[2],
         ] as [number, number, number],
         heatLevel: isModified ? 0.9 : b.heatLevel,

@@ -28,7 +28,7 @@ export const TelemetryVehicles: React.FC<Props> = ({ buildings, isLive }) => {
 
   const vehicleGroupRef = useRef<THREE.Group>(null);
 
-  // Generate Realistic Multi-Lane Vehicles (Matching Photo 1 Reference)
+  // Generate Realistic Multi-Lane Vehicles (Grid-Aligned Manhattan Pathing)
   const vehicles = useMemo(() => {
     const list: RealisticVehicle[] = [];
     const vehicleTypes: VehicleModelType[] = ['sedan', 'taxi', 'van', 'suv', 'motorcycle'];
@@ -38,68 +38,60 @@ export const TelemetryVehicles: React.FC<Props> = ({ buildings, isLive }) => {
         const target = buildingMap.get(targetId);
         if (!target) return;
 
+        // Manhattan Grid Pathfinding Logic
         const start = new THREE.Vector3(source.position[0], 0.25, source.position[2]);
         const end = new THREE.Vector3(target.position[0], 0.25, target.position[2]);
 
-        const control1 = new THREE.Vector3(
-          start.x + (end.x - start.x) * 0.33,
-          0.25,
-          start.z + (end.z - start.z) * 0.33
-        );
-        const control2 = new THREE.Vector3(
-          start.x + (end.x - start.x) * 0.66,
-          0.25,
-          start.z + (end.z - start.z) * 0.66
-        );
+        // Snap to nearest avenue (X) and street (Z)
+        // Corridors are at multiples of 16 (-32, -16, 0, 16, 32)
+        const snap = (val: number) => Math.round(val / 16) * 16;
+        
+        const roadStartX = snap(start.x);
+        const roadEndZ = snap(end.z);
 
-        const dir = end.clone().sub(start).normalize();
-        const perp = new THREE.Vector3(-dir.z, 0, dir.x);
+        // Path: Driveway -> Nearest Avenue -> Nearest Street -> Driveway
+        const p0 = start.clone();
+        const p1 = new THREE.Vector3(roadStartX, 0.25, start.z);
+        const p2 = new THREE.Vector3(roadStartX, 0.25, roadEndZ);
+        const p3 = new THREE.Vector3(end.x, 0.25, roadEndZ);
+        const p4 = end.clone();
 
-        // 4-Lane Avenue Curves
-        const laneReq1 = new THREE.CubicBezierCurve3(
-          start.clone().add(perp.clone().multiplyScalar(0.6)),
-          control1.clone().add(perp.clone().multiplyScalar(0.6)),
-          control2.clone().add(perp.clone().multiplyScalar(0.6)),
-          end.clone().add(perp.clone().multiplyScalar(0.6))
-        );
-        const laneReq2 = new THREE.CubicBezierCurve3(
-          start.clone().add(perp.clone().multiplyScalar(1.4)),
-          control1.clone().add(perp.clone().multiplyScalar(1.4)),
-          control2.clone().add(perp.clone().multiplyScalar(1.4)),
-          end.clone().add(perp.clone().multiplyScalar(1.4))
-        );
-        const laneRes1 = new THREE.CubicBezierCurve3(
-          end.clone().sub(perp.clone().multiplyScalar(0.6)),
-          control2.clone().sub(perp.clone().multiplyScalar(0.6)),
-          control1.clone().sub(perp.clone().multiplyScalar(0.6)),
-          start.clone().sub(perp.clone().multiplyScalar(0.6))
-        );
-        const laneRes2 = new THREE.CubicBezierCurve3(
-          end.clone().sub(perp.clone().multiplyScalar(1.4)),
-          control2.clone().sub(perp.clone().multiplyScalar(1.4)),
-          control1.clone().sub(perp.clone().multiplyScalar(1.4)),
-          start.clone().sub(perp.clone().multiplyScalar(1.4))
-        );
+        // Base curve
+        const baseCurve = new THREE.CatmullRomCurve3([p0, p1, p2, p3, p4], false, 'catmullrom', 0.1);
 
         const latency = source.latencyMs || 20;
-
-        // SPEED CALCULATION: Low latency = Fast traffic, High latency = Traffic congestion!
         const speed = Math.max(0.04, Math.min(0.5, 28 / latency));
 
-        const curves = [laneReq1, laneReq2, laneRes1, laneRes2];
-
-        // Spawn multiple vehicles across 4 lanes to recreate Photo 1 traffic density
-        curves.forEach((c, cIdx) => {
+        // Create 2 lanes of traffic (offset from center)
+        for (let lane = 0; lane < 2; lane++) {
           for (let i = 0; i < 3; i++) {
-            const vType = vehicleTypes[(cIdx + i) % vehicleTypes.length];
-            let vColor = '#38BDF8'; // Blue sedan default
-            if (vType === 'taxi') vColor = '#EAB308'; // NYC Yellow Taxi
-            if (vType === 'van') vColor = '#F8FAFC'; // White delivery van
-            if (vType === 'suv') vColor = '#0F172A'; // Black SUV
-            if (vType === 'motorcycle') vColor = '#EF4444'; // Red motorcycle
+            const vType = vehicleTypes[(lane + i) % vehicleTypes.length];
+            let vColor = '#38BDF8';
+            if (vType === 'taxi') vColor = '#EAB308';
+            if (vType === 'van') vColor = '#F8FAFC';
+            if (vType === 'suv') vColor = '#0F172A';
+            if (vType === 'motorcycle') vColor = '#EF4444';
+
+            // We generate offset curves by sampling the base curve.
+            // A precise parallel curve requires sampling and calculating normals.
+            const offsetDist = lane === 0 ? 0.8 : 2.0; // Lane 1 and Lane 2
+            const numPts = 40;
+            const pts = baseCurve.getSpacedPoints(numPts);
+            const offsetPts: THREE.Vector3[] = [];
+            
+            for (let j = 0; j <= numPts; j++) {
+              const t = j / numPts;
+              const pt = baseCurve.getPoint(t);
+              const tangent = baseCurve.getTangent(t);
+              // Perpendicular vector for offset (Y is up, so normal is (-tangent.z, 0, tangent.x))
+              const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+              offsetPts.push(pt.clone().add(normal.multiplyScalar(offsetDist)));
+            }
+            
+            const finalCurve = new THREE.CatmullRomCurve3(offsetPts, false, 'catmullrom', 0.1);
 
             list.push({
-              curve: c,
+              curve: finalCurve,
               progress: (i / 3) + Math.random() * 0.15,
               speed: speed * (0.85 + Math.random() * 0.3),
               modelType: vType,
@@ -107,7 +99,7 @@ export const TelemetryVehicles: React.FC<Props> = ({ buildings, isLive }) => {
               latencyMs: latency,
             });
           }
-        });
+        }
       });
     });
 
